@@ -1,0 +1,74 @@
+# DEWU Global Sneaker Store
+
+A responsive sneaker storefront starter built with HTML/CSS/vanilla JavaScript, Node.js/Express, PostgreSQL, server-side sessions, bcrypt password hashing, and Stripe Checkout.
+
+## Features
+- Responsive dark storefront, product search/category filter, shopping bag.
+- Registration/login; passwords hashed with bcrypt; session cookie is HttpOnly and Secure in production.
+- PostgreSQL tables for users, products, orders, and persistent sessions.
+- Admin product create/edit/hide UI and order list.
+- Stripe Checkout integration with webhook payment status updates.
+- Basic security headers, rate limits on API/auth, server-side validation.
+
+## Requirements
+- Node.js 20+
+- PostgreSQL database
+- Stripe account eligible for your business country (for real payments)
+
+## Local setup
+1. Install Node.js 20+.
+2. Create a PostgreSQL database named `dewu`.
+3. Copy `.env.example` to `.env`, then fill in `DATABASE_URL`, a unique `SESSION_SECRET` (32+ random characters), `ADMIN_EMAIL`, `ADMIN_PASSWORD` (12+ characters recommended), and Stripe test keys.
+4. Run:
+   ```bash
+   npm install
+   npm start
+   ```
+5. Open http://localhost:3000
+6. Check health at http://localhost:3000/api/health
+
+The first admin is created at startup if `ADMIN_EMAIL` and `ADMIN_PASSWORD` are configured. If that email already exists, its role is promoted to admin but its password is not overwritten.
+
+## Stripe test setup
+1. Use test-mode keys from the Stripe Dashboard; do not use live keys until you have tested the entire flow.
+2. Set `STRIPE_SECRET_KEY=sk_test_...`.
+3. For local webhook testing, install Stripe CLI and run:
+   ```bash
+   stripe listen --forward-to localhost:3000/api/stripe/webhook
+   ```
+4. Copy the webhook signing secret shown by Stripe CLI to `STRIPE_WEBHOOK_SECRET`.
+5. Test Checkout using Stripe's official test card `4242 4242 4242 4242`, a future expiry date, any CVC, and a test billing address. Use only test mode while developing.
+
+The webhook endpoint marks orders paid when Stripe confirms payment. Do not trust a browser redirect as proof of payment.
+
+## Deploy to Render
+1. Push this project to a private/public Git repository.
+2. Create a managed PostgreSQL database in Render (or use another managed PostgreSQL provider).
+3. Create a Render Web Service from the repo. `render.yaml` is a starting blueprint; configure environment variables in the Render dashboard.
+4. Set:
+   - `NODE_ENV=production`
+   - `DATABASE_URL` = the provider's internal PostgreSQL URL when available
+   - `DATABASE_SSL=true` if required by your database provider
+   - `BASE_URL=https://your-real-service-domain`
+   - `SESSION_SECRET` = a long random secret
+   - `ADMIN_EMAIL`, `ADMIN_PASSWORD`
+   - `STRIPE_SECRET_KEY`
+   - `STRIPE_WEBHOOK_SECRET`
+5. Add a Stripe webhook endpoint in Stripe Dashboard:
+   `https://your-real-service-domain/api/stripe/webhook`
+   Subscribe to `checkout.session.completed`, `checkout.session.async_payment_succeeded`, and `checkout.session.async_payment_failed`.
+6. Test a complete order, webhook status, login, and admin restrictions before launch.
+7. Add your custom domain in Render and update DNS as instructed by Render.
+
+## Before accepting real orders
+- Stripe availability depends on the country where your business is legally established, its verification, and its bank account. Do not assume every country can open a Stripe merchant account.
+- The checkout currently offers a limited list of Stripe-supported shipping countries; adjust it based on the actual countries you can legally ship to. âWorldwideâ requires shipping contracts, customs/tax planning, delivery pricing, return/refund policy, privacy policy, and country-specific consumer-law compliance.
+- Product prices are currently USD. Add currency/localization and accurate tax/shipping calculation before production.
+- Replace demo product images/content with images you own or are licensed to use.
+- Configure transactional email, password reset, email verification, CSRF protection suitable for your deployment, monitoring, backups, and a documented privacy policy/terms.
+- Add inventory reservation/decrementing and idempotent fulfillment workflows before real sales. This starter checks stock at checkout but does not reserve/decrement it.
+- Add admin order management and shipping/tracking workflows before launch.
+- Keep `.env` and all secret keys out of Git. Never expose Stripe secret keys in frontend JavaScript.
+
+## Important
+This is a functional starter project, not a fully audited production commerce system. Test thoroughly and have payment, tax, shipping, privacy, and security settings reviewed before taking live payments.
